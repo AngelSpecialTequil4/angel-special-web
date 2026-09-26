@@ -2584,14 +2584,19 @@
         }
       });
 
-      // Envío del formulario
-      sendBtn.addEventListener('click', function () {
+      // Envío del formulario conectado a Supabase
+      const SUPABASE_URL = 'https://uzespobaokgssvjnjwjn.supabase.co';
+      const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV6ZXNwb2Jhb2tnc3N2am5qd2puIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAzNzkzNjAsImV4cCI6MjEwNTk1NTM2MH0.0u4eRhidjsxXaVWUVxDDweP-DtO6kjw0Ks9NbmrNYNo';
+
+      sendBtn.addEventListener('click', async function () {
         const name = document.getElementById('cp-name').value.trim();
         const email = document.getElementById('cp-email').value.trim();
-        const subject = document.getElementById('cp-subject').value;
+        const subjectSelect = document.getElementById('cp-subject');
+        const subjectVal = subjectSelect.value;
+        const subjectText = subjectSelect.options[subjectSelect.selectedIndex]?.text || subjectVal;
         const message = document.getElementById('cp-message').value.trim();
 
-        if (!name || !email || !subject || !message) {
+        if (!name || !email || !subjectVal || !message) {
           alert('Por favor completa todos los campos antes de enviar.');
           return;
         }
@@ -2602,28 +2607,52 @@
           return;
         }
 
-        /* -------------------------------------------------------
-         * TODO: Conectar con base de datos aquí.
-         * Datos: { name, email, subject, message }
-         * Ejemplo Supabase:
-         *   await supabase.from('contactos').insert([{ name, email, subject, message }])
-         * ------------------------------------------------------- */
-        console.log('[Angel Special] Contacto:', { name, email, subject, message });
+        const originalBtnText = sendBtn.innerHTML;
+        sendBtn.disabled = true;
+        sendBtn.innerHTML = 'Enviando mensaje...';
 
-        // Mostrar confirmación
-        formSec.style.display = 'none';
-        successSec.classList.add('visible');
+        try {
+          const response = await fetch(`${SUPABASE_URL}/rest/v1/mensajes_contacto`, {
+            method: 'POST',
+            headers: {
+              'apikey': SUPABASE_ANON_KEY,
+              'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+              'Content-Type': 'application/json',
+              'Prefer': 'return=minimal'
+            },
+            body: JSON.stringify({
+              nombre: name,
+              correo: email,
+              asunto: subjectText,
+              mensaje: message
+            })
+          });
 
-        // Reiniciar tras 4 segundos
-        setTimeout(function () {
-          document.getElementById('cp-name').value = '';
-          document.getElementById('cp-email').value = '';
-          document.getElementById('cp-subject').value = '';
-          document.getElementById('cp-message').value = '';
-          formSec.style.display = '';
-          successSec.classList.remove('visible');
-          togglePanel(false);
-        }, 4000);
+          if (!response.ok) {
+            throw new Error(`Error en el servidor: ${response.statusText}`);
+          }
+
+          // Mostrar confirmación
+          formSec.style.display = 'none';
+          successSec.classList.add('visible');
+
+          // Reiniciar tras 4 segundos
+          setTimeout(function () {
+            document.getElementById('cp-name').value = '';
+            document.getElementById('cp-email').value = '';
+            document.getElementById('cp-subject').value = '';
+            document.getElementById('cp-message').value = '';
+            formSec.style.display = '';
+            successSec.classList.remove('visible');
+            togglePanel(false);
+          }, 4000);
+        } catch (err) {
+          console.error('[Angel Special] Error al enviar a Supabase:', err);
+          alert('Hubo un problema al enviar tu mensaje. Por favor intenta de nuevo.');
+        } finally {
+          sendBtn.disabled = false;
+          sendBtn.innerHTML = originalBtnText;
+        }
       });
     }());
   </script>
